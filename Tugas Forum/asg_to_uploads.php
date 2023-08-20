@@ -2,7 +2,7 @@
 define("ROLE_A", "role_a");
 define("ROLE_B", "role_b");
 
-$host = 'localhost';  
+$host = 'localhost:12890';  
 $username = 'root'; 
 $password = ''; 
 $dbname = 'dbforum';   
@@ -154,7 +154,7 @@ function hasRoleA($userRole) {
 
                     if (move_uploaded_file($_FILES["uploadFile"]["tmp_name"], $targetFile)) {
                         try {
-                            $fileContent = file_get_contents($targetFile); // Read file content into a variable
+                            $fileContent = file_get_contents($targetFile);
 
                             $stmt = $db->prepare("INSERT INTO uploaded_files (email, file_data, file_path) VALUES (:email, :file_data, :file_path)");
                             $stmt->bindParam(':email', $userEmail);
