@@ -154,31 +154,26 @@ function hasRoleA($userRole) {
 
                     if (move_uploaded_file($_FILES["uploadFile"]["tmp_name"], $targetFile)) {
                         try {
-                            $stmt = $db->prepare("INSERT INTO uploaded_files (email, file_path) VALUES (:email, :file_path)");
+                            $fileContent = file_get_contents($targetFile); // Read file content into a variable
+
+                            $stmt = $db->prepare("INSERT INTO uploaded_files (email, file_data, file_path) VALUES (:email, :file_data, :file_path)");
                             $stmt->bindParam(':email', $userEmail);
+                            $stmt->bindParam(':file_data', $fileContent, PDO::PARAM_LOB);
                             $stmt->bindParam(':file_path', $targetFile);
                             $stmt->execute();
                             echo "<p class='success'>File uploaded successfully and data stored in the database.</p>";
-
-                        } catch (PDOException $e) 
-                            {
+                        } catch (PDOException $e) {
                             echo "<p class='error'>Error storing data in the database: " . $e->getMessage() . "</p>";
-                            }
-                    } 
-                    else
-                        {
-                        echo "<p class='error'>Error uploading file.</p>";
                         }
-                } 
-                else 
-                    {
-                    echo "<p class='error'>You don't have permission to upload files.</p>";
+                    } else {
+                        echo "<p class='error'>Error uploading file.</p>";
                     }
-            } 
-            else 
-                {
-                echo "<p class='error'>Email or role field is missing.</p>";
+                } else {
+                    echo "<p class='error'>You don't have permission to upload files.</p>";
                 }
+            } else {
+                echo "<p class='error'>Email or role field is missing.</p>";
+            }
         }
         ?>
     </div>
