@@ -1,8 +1,8 @@
 <?php
-define("ROLE_A", "role_a");
-define("ROLE_B", "role_b");
+define("ROLE_A", "Role_A");
+define("ROLE_B", "Role_B");
 
-$host = 'localhost:12890';  
+$host = 'localhost';  
 $username = 'root'; 
 $password = ''; 
 $dbname = 'dbforum';   
@@ -18,6 +18,9 @@ function hasRoleA($userRole) {
     return $userRole === ROLE_A;
 }
 
+function hasRoleB($userRole) {
+    return $userRole === ROLE_B;
+}
 ?>
 
 <!DOCTYPE html>
@@ -42,7 +45,7 @@ function hasRoleA($userRole) {
         padding: 150px;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         width: 400px;
-    }
+        }
 
     h1 {
         text-align: center;
@@ -126,38 +129,31 @@ function hasRoleA($userRole) {
         </form>
 
         <?php
-        if ($_SERVER["REQUEST_METHOD"] == "POST") {
-            if (isset($_POST["userEmail"]) && isset($_POST["userRole"])) {
-                $userEmail = $_POST["userEmail"];
-                $userRole = $_POST["userRole"];
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    if (isset($_POST["userEmail"]) && isset($_POST["userRole"])) {
+        $userEmail = $_POST["userEmail"];
+        $userRole = $_POST["userRole"];
 
-                if (!filter_var($userEmail, FILTER_VALIDATE_EMAIL)) {
-                    echo "<p class='error'>Invalid email format.</p>";
-                    exit;
-                   }
+        $stmt = $db->prepare("SELECT role FROM user_data WHERE email = :email");
+        $stmt->bindParam(':email', $userEmail);
+        $stmt->execute();
+        $userData = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if (hasRoleA($userRole)) {
-                    if ($_FILES["uploadFile"]["error"] == UPLOAD_ERR_NO_FILE) {
-                        echo "<p class='error'>Please select a file.</p>";
-                        exit;
-                    }
+        if ($userData) {
+            $dbUserRole = $userData['role'];
 
-                    $allowedTypes = ['image/jpeg', 'image/png'];
-                    if (!in_array($_FILES["uploadFile"]["type"], $allowedTypes)) 
-                        {
-                        echo "<p class='error'>Only JPEG and PNG files are allowed.</p>";
-                        exit;
-                       }
-
+            if ($dbUserRole === ROLE_A && hasRoleA($userRole)) {
+                if ($_FILES["uploadFile"]["error"] == UPLOAD_ERR_NO_FILE) {
+                    echo "<p class='error'>Please select a file.</p>";
+                } elseif (in_array($_FILES["uploadFile"]["type"], ['image/jpeg', 'image/png'])) {
                     $targetDirectory = "dump_file/";
                     $targetFile = $targetDirectory . basename($_FILES["uploadFile"]["name"]);
 
                     if (move_uploaded_file($_FILES["uploadFile"]["tmp_name"], $targetFile)) {
-                        try {
-                            $fileContent = file_get_contents($targetFile);
+                        $fileContent = file_get_contents($targetFile);
 
-                            $stmt = $db->prepare("INSERT INTO uploaded_files (email, file_data, file_path) VALUES (:email, :file_data, :file_path)");
-                            $stmt->bindParam(':email', $userEmail);
+                        try {
+                            $stmt = $db->prepare("INSERT INTO uploaded_files (file_data, file_path) VALUES (:file_data, :file_path)");
                             $stmt->bindParam(':file_data', $fileContent, PDO::PARAM_LOB);
                             $stmt->bindParam(':file_path', $targetFile);
                             $stmt->execute();
@@ -169,13 +165,43 @@ function hasRoleA($userRole) {
                         echo "<p class='error'>Error uploading file.</p>";
                     }
                 } else {
-                    echo "<p class='error'>You don't have permission to upload files.</p>";
+                    echo "<p class='error'>Only JPEG and PNG files are allowed.</p>";
+                }
+            } elseif ($dbUserRole === ROLE_B && hasRoleB($userRole)) {
+                if ($_FILES["uploadFile"]["error"] == UPLOAD_ERR_NO_FILE) {
+                    echo "<p class='error'>Please select a file.</p>";
+                } elseif (in_array($_FILES["uploadFile"]["type"], ['image/jpeg', 'image/png'])) {
+                    $targetDirectory = "dump_file/";
+                    $targetFile = $targetDirectory . basename($_FILES["uploadFile"]["name"]);
+
+                    if (move_uploaded_file($_FILES["uploadFile"]["tmp_name"], $targetFile)) {
+                        $fileContent = file_get_contents($targetFile);
+
+                        try {
+                            // Store file data in the database
+                            $stmt = $db->prepare("INSERT INTO uploaded_files (file_data, file_path) VALUES (:file_data, :file_path)");
+                            $stmt->bindParam(':file_data', $fileContent, PDO::PARAM_LOB);
+                            $stmt->bindParam(':file_path', $targetFile);
+                            $stmt->execute();
+                            echo "<p class='success'>File uploaded successfully and data stored in the database.</p>";
+                        } catch (PDOException $e) {
+                            echo "<p class='error'>Error storing data in the database: " . $e->getMessage() . "</p>";
+                        }
+                    } else {
+                        echo "<p class='error'>Error uploading file.</p>";
+                    }
+                } else {
+                    echo "<p class='error'>Only JPEG and PNG files are allowed.</p>";
                 }
             } else {
-                echo "<p class='error'>Email or role field is missing.</p>";
+                echo "<p class='error'>You don't have permission to upload files or incorrect role selection.</p>";
             }
+        } else {
+            echo "<p class='error'>User not found or incorrect role.</p>";
         }
-        ?>
+    }
+}
+?>
     </div>
 </body>
 </html>
