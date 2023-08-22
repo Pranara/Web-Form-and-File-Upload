@@ -15,9 +15,19 @@ if ($conn->connect_error) {
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $username = $_POST["username"];
     $password = $_POST["password"];
+    $recaptchaResponse = $_POST["g-recaptcha-response"]; 
 
-    $sql = "SELECT id, password FROM user_data WHERE username = '$username'";
-    $result = $conn->query($sql);
+
+       $secretKey = "6LdofsgnAAAAAMaiht4p5Prd9mnDaczPRJiagQNs";
+
+    
+    $recaptchaUrl = "https://www.google.com/recaptcha/api/siteverify?secret=$secretKey&response=$recaptchaResponse";
+    $recaptchaResponseData = file_get_contents($recaptchaUrl);
+    $recaptchaResult = json_decode($recaptchaResponseData);
+
+    if ($recaptchaResult->success) {
+        $sql = "SELECT id, password FROM user_data WHERE username = '$username'";
+        $result = $conn->query($sql);
 
     if ($result->num_rows == 1) {
         $row = $result->fetch_assoc();
@@ -30,6 +40,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } else {
         echo "Invalid username or password.";
     }
+}
 }
 ?>
 
@@ -105,6 +116,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             margin-top: 10px;
         }
     </style>
+
+ <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
     <div class="container">
@@ -114,6 +127,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <input type="text" name="username" required><br>
             <label for="password">Password:</label>
             <input type="password" name="password" required><br>
+          
+            <div class="g-recaptcha" data-sitekey="6LdofsgnAAAAAIV_4pCOvHtgji_FmKzsbn2on11u"></div>
             <input type="submit" value="Login">
         </form>
         <div class="register-link">

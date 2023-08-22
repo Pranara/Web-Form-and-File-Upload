@@ -16,7 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $password = password_hash($_POST["password"], PASSWORD_BCRYPT);
     $role = $_POST["role"];
 
-    // Check if the username or email already exists in the database
+
     $checkUsernameQuery = "SELECT id FROM user_data WHERE username = '$username' OR email = '$email'";
     $result = $conn->query($checkUsernameQuery);
 
